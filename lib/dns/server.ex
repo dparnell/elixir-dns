@@ -21,7 +21,7 @@ defmodule DNS.Server do
 
   @spec accept(:inet.port, DNS.Server) :: no_return
   def accept_tcp(port, handler) do
-    socket = Socket.TCP.listen!(port, as: :binary, packet: 2, backlock: 10)
+    socket = Socket.TCP.listen!(port, as: :binary, packet: 2, backlog: 10)
     Logger.info "TCP DNS Server listening at #{port}"
 
     accept_tcp_loop(socket, handler)
