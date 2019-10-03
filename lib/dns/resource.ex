@@ -4,9 +4,9 @@ defmodule DNS.Resource do
   """
 
   record = Record.extract(:dns_rr, from_lib: "kernel/src/inet_dns.hrl")
-  keys   = :lists.map(&elem(&1, 0), record)
-  vals   = :lists.map(&{&1, [], nil}, keys)
-  pairs  = :lists.zip(keys, vals)
+  keys = :lists.map(&elem(&1, 0), record)
+  vals = :lists.map(&{&1, [], nil}, keys)
+  pairs = :lists.zip(keys, vals)
 
   defstruct record
   @type t :: %__MODULE__{}
@@ -22,7 +22,10 @@ defmodule DNS.Resource do
   Converts a `:dns_rr` record into a `DNS.ResourceRecord`.
   """
   def from_record(dns_rr)
+
   def from_record({:dns_rr, unquote_splicing(vals)}) do
     %DNS.Resource{unquote_splicing(pairs)}
   end
+
+  def from_record(_), do: nil
 end

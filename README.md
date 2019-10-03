@@ -1,5 +1,7 @@
 # DNS
-![https://hex.pm/packages/dns](https://img.shields.io/hexpm/v/dns.svg)
+[![Hex.pm](https://img.shields.io/hexpm/v/dns.svg)](https://hex.pm/packages/dns)
+[![Hex.pm](https://img.shields.io/hexpm/dt/dns.svg)](https://hex.pm/packages/dns)
+[![Build Status](https://travis-ci.org/tungd/elixir-dns.svg?branch=master)](https://travis-ci.org/tungd/elixir-dns)
 
 DNS library for Elixir. Currently, the package provides:
 
@@ -15,19 +17,16 @@ but for now `inet_dns` is simple and worked for me.
 
 The package is available in [Hex](https://hex.pm) and can be installed as:
 
-  1. Add dns to your list of dependencies in `mix.exs`:
+  1. Make sure you have the Erlang/OTP source files installed,
+     otherwise the compilation will fail with an `{:error, :enoent}`
+     message. On Ubuntu, this can be done using `apt-get install
+     erlang-src`.
+
+  2. Add dns to your list of dependencies in `mix.exs`:
 
         ```elixir
         def deps do
-          [{:dns, "~> 0.0.3"}]
-        end
-        ```
-
-  2. Ensure dns is started before your application:
-
-        ```elixir
-        def application do
-          [applications: [:dns]]
+          [{:dns, "~> 2.1.2"}]
         end
         ```
 
@@ -50,39 +49,31 @@ iex> DNS.query("google.com")
   ra: true, rcode: 0, rd: false, tc: false}, nslist: [],
  qdlist: [%DNS.Query{class: :in, domain: 'google.com', type: :a}]}
 
-iex> DNS.resolve("google.com", {"8.8.8.8", 53})
+iex> DNS.resolve("google.com", :a, {"8.8.8.8", 53})
 ...
 ```
 
 ### DNS server
 
 ```elixir
-defmodule TestServer do
-  use Application
-
+defmodule ServerExample do
+  @moduledoc """
+  Example implementing DNS.Server behaviour
+  """
   @behaviour DNS.Server
+  use DNS.Server
 
-  def start(_args, _opts) do
-    import Supervisor.Spec, warn: false
-
-    port = Application.get_env(:dns, :server)[:port]
-    children = [
-      worker(Task, [DNS.Server, :accept, [port, __MODULE__]])
-    ]
-
-    opts = [strategy: :one_for_one, name: DNS.Server.Supervisor]
-    Supervisor.start_link(children, opts)
-  end
-
-  def handle(record, {ip, _}) do
+  def handle(record, _cl) do
+    Logger.info(fn -> "#{inspect(record)}" end)
     query = hd(record.qdlist)
 
-    result = case query.type do
-      :a -> {127, 0, 0, 1}
-      :cname -> 'your.domain.com'
-      :txt -> ['your txt value']
-      _ -> nil
-    end
+    result =
+      case query.type do
+        :a -> {127, 0, 0, 1}
+        :cname -> 'your.domain.com'
+        :txt -> ['your txt value']
+        _ -> nil
+      end
 
     resource = %DNS.Resource{
       domain: query.domain,
@@ -92,12 +83,23 @@ defmodule TestServer do
       data: result
     }
 
-    %{record | anlist: [resource]}
+    %{record | anlist: [resource], header: %{record.header | qr: true}}
   end
 end
 ```
 
-For more information, see [API Reference](https://hexdocs.pm/dns/1.0.1/api-reference.html)
+To run the example server in `iex`:
+
+```
+iex(1)> c "example/test_server.ex"
+[ServerExample]
+iex(2)> {:ok, server_pid} = ServerExample.start_link 8000
+Server listening at 8000
+{:ok, #PID<0.180.0>}
+iex(3)> Process.exit(server_pid, :normal)
+```
+
+For more information, see [API Reference](https://hexdocs.pm/dns/2.1.2/api-reference.html)
 
 ## License
 
